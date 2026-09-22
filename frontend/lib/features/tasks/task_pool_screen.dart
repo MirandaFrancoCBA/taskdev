@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/api/api_client.dart';
 import 'task.dart';
 import 'task_service.dart';
+import 'task_realtime_service.dart';
 
 class TaskPoolScreen extends StatefulWidget {
   const TaskPoolScreen({super.key, required this.teamId, required this.userId, required this.api});
@@ -19,11 +20,31 @@ class _TaskPoolScreenState extends State<TaskPoolScreen> {
   List<Task> tasks = const [];
   bool loading = true;
   String? error;
+  TaskRealtimeService? realtime;
 
   @override
   void initState() {
     super.initState();
     refresh();
+    final token = widget.api.accessToken;
+    if (token != null) {
+      realtime = TaskRealtimeService(teamId: widget.teamId, accessToken: token, onTaskEvent: _refreshFromRealtime)..connect();
+    }
+  }
+
+  Future<void> _refreshFromRealtime() async {
+    try {
+      final result = await service.listTasks(widget.teamId);
+      if (mounted) setState(() { tasks = result; error = null; });
+    } catch (_) {
+      // Preserve the last good local state. Manual REST refresh remains available.
+    }
+  }
+
+  @override
+  void dispose() {
+    realtime?.dispose();
+    super.dispose();
   }
 
   Future<void> refresh() async {
