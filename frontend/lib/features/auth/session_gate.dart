@@ -35,7 +35,7 @@ class _SessionGateState extends State<SessionGate> {
     if (loading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
     final session = sessionContext;
     if (session == null || session.teams.isEmpty) return LoginScreen(api: widget.api);
-    if (session.teams.length == 1) return TaskPoolScreen(teamId: session.teams.single.id, userId: session.userId, api: widget.api);
+    if (session.teams.length == 1) return TaskPoolScreen(team: session.teams.single, userId: session.userId, api: widget.api);
     return TeamSelectionScreen(api: widget.api, userId: session.userId, teams: session.teams);
   }
 }

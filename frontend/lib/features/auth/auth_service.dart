@@ -8,10 +8,26 @@ class AuthContext {
 }
 
 class TeamSummary {
-  const TeamSummary({required this.id, required this.name});
+  const TeamSummary({required this.id, required this.name, required this.role, required this.members});
   final int id;
   final String name;
-  factory TeamSummary.fromJson(Map<String, dynamic> json) => TeamSummary(id: json['id'] as int, name: json['name'] as String);
+  final String role;
+  final List<TeamMember> members;
+
+  factory TeamSummary.fromJson(Map<String, dynamic> json, int userId) {
+    final memberships = (json['memberships'] as List<dynamic>? ?? const []);
+    final members = memberships.map((item) => TeamMember.fromJson(item as Map<String, dynamic>)).toList();
+    final mine = members.where((member) => member.userId == userId);
+    return TeamSummary(id: json['id'] as int, name: json['name'] as String, role: mine.isEmpty ? 'member' : mine.first.role, members: members);
+  }
+}
+
+class TeamMember {
+  const TeamMember({required this.userId, required this.username, required this.role});
+  final int userId;
+  final String username;
+  final String role;
+  factory TeamMember.fromJson(Map<String, dynamic> json) => TeamMember(userId: json['user'] as int, username: json['username'] as String, role: json['role'] as String);
 }
 
 class AuthService {
@@ -59,7 +75,7 @@ class AuthService {
   Future<AuthContext> loadContext() async {
     final user = await api.get('/auth/me/');
     final teamData = await api.getList('/teams/');
-    return AuthContext(userId: user['id'] as int, teams: teamData.map((item) => TeamSummary.fromJson(item as Map<String, dynamic>)).toList());
+    return AuthContext(userId: user['id'] as int, teams: teamData.map((item) => TeamSummary.fromJson(item as Map<String, dynamic>, user['id'] as int)).toList());
   }
 
   Future<void> logout() async {

@@ -8,8 +8,8 @@ import 'task_service.dart';
 import 'task_realtime_service.dart';
 
 class TaskPoolScreen extends StatefulWidget {
-  const TaskPoolScreen({super.key, required this.teamId, required this.userId, required this.api});
-  final int teamId;
+  const TaskPoolScreen({super.key, required this.team, required this.userId, required this.api});
+  final TeamSummary team;
   final int userId;
   final ApiClient api;
 
@@ -30,13 +30,13 @@ class _TaskPoolScreenState extends State<TaskPoolScreen> {
     refresh();
     final token = widget.api.accessToken;
     if (token != null) {
-      realtime = TaskRealtimeService(teamId: widget.teamId, accessToken: token, onTaskEvent: _refreshFromRealtime)..connect();
+      realtime = TaskRealtimeService(teamId: widget.team.id, accessToken: token, onTaskEvent: _refreshFromRealtime)..connect();
     }
   }
 
   Future<void> _refreshFromRealtime() async {
     try {
-      final result = await service.listTasks(widget.teamId);
+      final result = await service.listTasks(widget.team.id);
       if (mounted) setState(() { tasks = result; error = null; });
     } catch (_) {
       // Preserve the last good local state. Manual REST refresh remains available.
@@ -52,7 +52,7 @@ class _TaskPoolScreenState extends State<TaskPoolScreen> {
   Future<void> refresh() async {
     setState(() { loading = true; error = null; });
     try {
-      final result = await service.listTasks(widget.teamId);
+      final result = await service.listTasks(widget.team.id);
       if (mounted) setState(() => tasks = result);
     } catch (e) {
       if (mounted) setState(() => error = e.toString());
@@ -79,6 +79,11 @@ class _TaskPoolScreenState extends State<TaskPoolScreen> {
     }
   }
 
+  Future<void> createTask() async {
+    final created = await showDialog<bool>(context: context, builder: (_) => _CreateTaskDialog(service: service, team: widget.team));
+    if (created == true) await refresh();
+  }
+
   @override
   Widget build(BuildContext context) {
     if (loading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
@@ -88,7 +93,8 @@ class _TaskPoolScreenState extends State<TaskPoolScreen> {
     final mine = tasks.where((task) => task.assignee == widget.userId && task.status != 'completed').toList();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('TaskDev'), actions: [IconButton(onPressed: refresh, icon: const Icon(Icons.refresh)), IconButton(tooltip: 'Log out', onPressed: () async { await AuthService(widget.api).logout(); if (!context.mounted) return; Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => LoginScreen(api: widget.api)), (_) => false); }, icon: const Icon(Icons.logout))]),
+      floatingActionButton: widget.team.role == 'coordinator' ? FloatingActionButton.extended(onPressed: createTask, icon: const Icon(Icons.add), label: const Text('New task')) : null,
+      appBar: AppBar(title: Text(widget.team.name), actions: [IconButton(onPressed: refresh, icon: const Icon(Icons.refresh)), IconButton(tooltip: 'Log out', onPressed: () async { await AuthService(widget.api).logout(); if (!context.mounted) return; Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => LoginScreen(api: widget.api)), (_) => false); }, icon: const Icon(Icons.logout))]),
       body: RefreshIndicator(
         onRefresh: refresh,
         child: ListView(
@@ -138,4 +144,72 @@ class _EmptyCard extends StatelessWidget {
   final String message;
   @override
   Widget build(BuildContext context) => Card(child: Padding(padding: const EdgeInsets.all(20), child: Text(message)));
+}
+
+
+class _CreateTaskDialog extends StatefulWidget {
+  const _CreateTaskDialog({required this.service, required this.team});
+  final TaskService service;
+  final TeamSummary team;
+
+  @override
+  State<_CreateTaskDialog> createState() => _CreateTaskDialogState();
+}
+
+class _CreateTaskDialogState extends State<_CreateTaskDialog> {
+  final title = TextEditingController();
+  final description = TextEditingController();
+  String priority = 'medium';
+  int? assignee;
+  DateTime? dueDate;
+  bool saving = false;
+  String? error;
+
+  Future<void> save() async {
+    if (title.text.trim().isEmpty) {
+      setState(() => error = 'Title is required.');
+      return;
+    }
+    setState(() { saving = true; error = null; });
+    try {
+      await widget.service.createTask(teamId: widget.team.id, title: title.text.trim(), description: description.text.trim(), priority: priority, assignee: assignee, dueDate: dueDate);
+      if (mounted) Navigator.of(context).pop(true);
+    } catch (e) {
+      if (mounted) setState(() => error = e.toString());
+    } finally {
+      if (mounted) setState(() => saving = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    title.dispose();
+    description.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('New task'),
+    content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
+      TextField(controller: title, autofocus: true, decoration: const InputDecoration(labelText: 'Title')),
+      TextField(controller: description, maxLines: 3, decoration: const InputDecoration(labelText: 'Description')),
+      DropdownButtonFormField<String>(initialValue: priority, decoration: const InputDecoration(labelText: 'Priority'), items: const [
+        DropdownMenuItem(value: 'low', child: Text('Low')),
+        DropdownMenuItem(value: 'medium', child: Text('Medium')),
+        DropdownMenuItem(value: 'high', child: Text('High')),
+        DropdownMenuItem(value: 'urgent', child: Text('Urgent')),
+      ], onChanged: saving ? null : (value) => setState(() => priority = value ?? 'medium')),
+      ListTile(contentPadding: EdgeInsets.zero, title: const Text('Due date'), subtitle: Text(dueDate == null ? 'No due date' : MaterialLocalizations.of(context).formatMediumDate(dueDate!)), trailing: Row(mainAxisSize: MainAxisSize.min, children: [if (dueDate != null) IconButton(tooltip: 'Clear due date', onPressed: saving ? null : () => setState(() => dueDate = null), icon: const Icon(Icons.clear)), IconButton(tooltip: 'Choose due date', onPressed: saving ? null : () async { final picked = await showDatePicker(context: context, initialDate: dueDate ?? DateTime.now(), firstDate: DateTime.now(), lastDate: DateTime.now().add(const Duration(days: 3650))); if (picked != null && mounted) setState(() => dueDate = picked); }, icon: const Icon(Icons.calendar_today))])),
+      DropdownButtonFormField<int?>(initialValue: assignee, decoration: const InputDecoration(labelText: 'Assign to'), items: [
+        const DropdownMenuItem<int?>(value: null, child: Text('Shared pool')),
+        ...widget.team.members.map((member) => DropdownMenuItem<int?>(value: member.userId, child: Text(member.username))),
+      ], onChanged: saving ? null : (value) => setState(() => assignee = value)),
+      if (error != null) ...[const SizedBox(height: 12), Text(error!, style: TextStyle(color: Theme.of(context).colorScheme.error))],
+    ])),
+    actions: [
+      TextButton(onPressed: saving ? null : () => Navigator.of(context).pop(false), child: const Text('Cancel')),
+      FilledButton(onPressed: saving ? null : save, child: Text(saving ? 'Creating…' : 'Create')),
+    ],
+  );
 }
