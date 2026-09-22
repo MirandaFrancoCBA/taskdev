@@ -6,9 +6,9 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 import '../../core/config/app_config.dart';
 
 class TaskRealtimeService {
-  TaskRealtimeService({required this.teamId, required this.accessToken, required this.onTaskEvent});
+  TaskRealtimeService({required this.teamId, required this.accessTokenProvider, required this.onTaskEvent});
   final int teamId;
-  final String accessToken;
+  final String? Function() accessTokenProvider;
   final Future<void> Function() onTaskEvent;
 
   WebSocketChannel? _channel;
@@ -19,6 +19,8 @@ class TaskRealtimeService {
 
   void connect() {
     if (_disposed) return;
+    final accessToken = accessTokenProvider();
+    if (accessToken == null) return;
     final uri = AppConfig.websocketUri(teamId, accessToken);
     try {
       _channel = WebSocketChannel.connect(uri);
