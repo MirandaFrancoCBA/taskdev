@@ -77,6 +77,8 @@ jobs:
         with:
           channel: stable
           cache: true
+      - run: flutter create . --platforms=android,ios,web
       - run: flutter pub get
       - run: flutter analyze
       - run: flutter test
+      - run: flutter build web --release --dart-define=API_BASE_URL=http://127.0.0.1:8000/api
