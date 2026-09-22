@@ -10,9 +10,10 @@ class TaskService {
     return data.map((item) => Task.fromJson(item as Map<String, dynamic>)).toList();
   }
 
-  Future<Task> createTask({required int teamId, required String title, String description = '', String priority = 'medium', int? assignee}) async {
+  Future<Task> createTask({required int teamId, required String title, String description = '', String priority = 'medium', int? assignee, DateTime? dueDate}) async {
     final body = <String, dynamic>{'team': teamId, 'title': title, 'description': description, 'priority': priority};
     if (assignee != null) body['assignee'] = assignee;
+    if (dueDate != null) body['due_date'] = dueDate.toIso8601String();
     return Task.fromJson(await api.post('/tasks/', body));
   }
 
