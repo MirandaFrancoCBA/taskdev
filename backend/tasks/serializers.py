@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from teams.models import TeamMembership
-from .models import Task
+from .models import Task, TaskActivity
 
 
 class TaskSerializer(serializers.ModelSerializer):
@@ -22,3 +22,12 @@ class TaskSerializer(serializers.ModelSerializer):
         if assignee and team and not TeamMembership.objects.filter(team=team, user=assignee).exists():
             raise serializers.ValidationError({"assignee": "Assignee must belong to the task team."})
         return attrs
+
+
+class TaskActivitySerializer(serializers.ModelSerializer):
+    actor_username = serializers.CharField(source="actor.username", read_only=True)
+
+    class Meta:
+        model = TaskActivity
+        fields = ("id", "event", "actor", "actor_username", "previous_value", "new_value", "created_at")
+        read_only_fields = fields
