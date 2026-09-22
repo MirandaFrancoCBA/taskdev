@@ -16,7 +16,7 @@ class SessionGate extends StatefulWidget {
 
 class _SessionGateState extends State<SessionGate> {
   late final AuthService auth = AuthService(widget.api);
-  AuthContext? context;
+  AuthContext? sessionContext;
   bool loading = true;
 
   @override
@@ -27,13 +27,13 @@ class _SessionGateState extends State<SessionGate> {
 
   Future<void> restore() async {
     final restored = await auth.restore();
-    if (mounted) setState(() { context = restored; loading = false; });
+    if (mounted) setState(() { sessionContext = restored; loading = false; });
   }
 
   @override
   Widget build(BuildContext context) {
     if (loading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    final session = this.context;
+    final session = sessionContext;
     if (session == null || session.teams.isEmpty) return LoginScreen(api: widget.api);
     if (session.teams.length == 1) return TaskPoolScreen(teamId: session.teams.single.id, userId: session.userId, api: widget.api);
     return TeamSelectionScreen(api: widget.api, userId: session.userId, teams: session.teams);
