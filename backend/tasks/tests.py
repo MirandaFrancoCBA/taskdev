@@ -210,3 +210,25 @@ class TaskApiTests(APITestCase):
         self.client.force_authenticate(self.member)
         response = self.client.get("/api/tasks/999999/activity/")
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
+    def test_member_cannot_edit_task_metadata(self):
+        task = Task.objects.create(title="Original", description="Keep", team=self.team, creator=self.coordinator, assignee=self.member, priority=Task.Priority.MEDIUM)
+        self.client.force_authenticate(self.member)
+        response = self.client.patch(f"/api/tasks/{task.id}/", {"title": "Changed", "description": "Changed", "priority": Task.Priority.URGENT, "due_date": "2030-01-01T12:00:00Z"}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        task.refresh_from_db()
+        self.assertEqual(task.title, "Original")
+        self.assertEqual(task.description, "Keep")
+        self.assertEqual(task.priority, Task.Priority.MEDIUM)
+        self.assertIsNone(task.due_date)
+        self.assertFalse(task.activities.exists())
+
+    def test_coordinator_can_edit_task_metadata(self):
+        task = Task.objects.create(title="Original", team=self.team, creator=self.coordinator)
+        self.client.force_authenticate(self.coordinator)
+        response = self.client.patch(f"/api/tasks/{task.id}/", {"title": "Updated", "priority": Task.Priority.HIGH}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        task.refresh_from_db()
+        self.assertEqual(task.title, "Updated")
+        self.assertEqual(task.priority, Task.Priority.HIGH)
