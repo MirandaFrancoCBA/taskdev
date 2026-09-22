@@ -36,6 +36,7 @@ class AuthService {
   }
   final ApiClient api;
   final SessionStore store;
+  Future<bool>? _refreshInFlight;
 
   Future<AuthContext> login(String username, String password) async {
     final tokens = await api.post('/auth/login/', {'username': username, 'password': password}, retry: false);
@@ -57,7 +58,15 @@ class AuthService {
     }
   }
 
-  Future<bool> refresh() async {
+  Future<bool> refresh() {
+    final inFlight = _refreshInFlight;
+    if (inFlight != null) return inFlight;
+    final operation = _performRefresh();
+    _refreshInFlight = operation;
+    return operation.whenComplete(() => _refreshInFlight = null);
+  }
+
+  Future<bool> _performRefresh() async {
     final refreshToken = await store.readRefresh();
     if (refreshToken == null) return false;
     try {
