@@ -26,6 +26,11 @@ class ApiClient {
     return _decodeObject(response);
   }
 
+  Future<Map<String, dynamic>> get(String path) async {
+    final response = await _client.get(Uri.parse('${AppConfig.apiBaseUrl}$path'), headers: _headers);
+    return _decodeObject(response);
+  }
+
   Future<List<dynamic>> getList(String path) async {
     final response = await _client.get(Uri.parse('${AppConfig.apiBaseUrl}$path'), headers: _headers);
     if (response.statusCode < 200 || response.statusCode >= 300) throw ApiException(_message(response));

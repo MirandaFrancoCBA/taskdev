@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/api/api_client.dart';
 import '../tasks/task_pool_screen.dart';
+import '../teams/team_selection_screen.dart';
 import 'auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -15,22 +16,34 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final username = TextEditingController();
   final password = TextEditingController();
-  final teamId = TextEditingController();
-  final userId = TextEditingController();
   bool loading = false;
   String? error;
 
   Future<void> login() async {
     setState(() { loading = true; error = null; });
     try {
-      await AuthService(widget.api).login(username.text.trim(), password.text);
+      final auth = await AuthService(widget.api).login(username.text.trim(), password.text);
       if (!mounted) return;
-      Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => TaskPoolScreen(teamId: int.parse(teamId.text), userId: int.parse(userId.text), api: widget.api)));
+      if (auth.teams.isEmpty) {
+        setState(() => error = 'Your account does not belong to a team yet.');
+        return;
+      }
+      final destination = auth.teams.length == 1
+          ? TaskPoolScreen(teamId: auth.teams.single.id, userId: auth.userId, api: widget.api)
+          : TeamSelectionScreen(api: widget.api, userId: auth.userId, teams: auth.teams);
+      Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => destination));
     } catch (e) {
       if (mounted) setState(() => error = e.toString());
     } finally {
       if (mounted) setState(() => loading = false);
     }
+  }
+
+  @override
+  void dispose() {
+    username.dispose();
+    password.dispose();
+    super.dispose();
   }
 
   @override
@@ -41,11 +54,7 @@ class _LoginScreenState extends State<LoginScreen> {
       const SizedBox(height: 24),
       TextField(controller: username, decoration: const InputDecoration(labelText: 'Username')),
       const SizedBox(height: 12),
-      TextField(controller: password, obscureText: true, decoration: const InputDecoration(labelText: 'Password')),
-      const SizedBox(height: 12),
-      TextField(controller: teamId, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Team ID')),
-      const SizedBox(height: 12),
-      TextField(controller: userId, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'User ID')),
+      TextField(controller: password, obscureText: true, onSubmitted: (_) => loading ? null : login(), decoration: const InputDecoration(labelText: 'Password')),
       if (error != null) ...[const SizedBox(height: 12), Text(error!, style: TextStyle(color: Theme.of(context).colorScheme.error))],
       const SizedBox(height: 24),
       FilledButton(onPressed: loading ? null : login, child: Text(loading ? 'Signing in…' : 'Sign in')),
