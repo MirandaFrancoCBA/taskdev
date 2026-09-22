@@ -82,3 +82,42 @@ class TaskApiTests(APITestCase):
         self.client.force_authenticate(self.member)
         response = self.client.post(f"/api/tasks/{task.id}/claim/")
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+
+
+    def test_creation_records_activity(self):
+        self.client.force_authenticate(self.member)
+        response = self.client.post("/api/tasks/", {"title": "Tracked", "team": self.team.id}, format="json")
+        task = Task.objects.get(pk=response.data["id"])
+        activity = task.activities.get()
+        self.assertEqual(activity.event, "created")
+        self.assertEqual(activity.actor, self.member)
+
+    def test_claim_records_activity(self):
+        task = Task.objects.create(title="Available", team=self.team, creator=self.coordinator)
+        self.client.force_authenticate(self.member)
+        self.client.post(f"/api/tasks/{task.id}/claim/")
+        activity = task.activities.get()
+        self.assertEqual(activity.event, "claimed")
+        self.assertEqual(activity.actor, self.member)
+        self.assertEqual(activity.new_value["assignee_id"], self.member.id)
+
+    def test_status_change_records_activity(self):
+        task = Task.objects.create(title="Working", team=self.team, creator=self.coordinator, assignee=self.member, status=Task.Status.IN_PROGRESS)
+        self.client.force_authenticate(self.member)
+        response = self.client.patch(f"/api/tasks/{task.id}/", {"status": "completed"}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        activity = task.activities.get()
+        self.assertEqual(activity.event, "completed")
+        self.assertEqual(activity.previous_value["status"], "in_progress")
+        self.assertEqual(activity.new_value["status"], "completed")
+
+    def test_member_can_read_activity_but_outsider_cannot(self):
+        task = Task.objects.create(title="Tracked", team=self.team, creator=self.coordinator)
+        from .models import TaskActivity
+        TaskActivity.objects.create(task=task, actor=self.coordinator, event=TaskActivity.Event.CREATED)
+        self.client.force_authenticate(self.member)
+        self.assertEqual(self.client.get(f"/api/tasks/{task.id}/activity/").status_code, status.HTTP_200_OK)
+        self.client.force_authenticate(self.outsider)
+        response = self.client.get(f"/api/tasks/{task.id}/activity/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 0)
