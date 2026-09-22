@@ -6,6 +6,7 @@ from rest_framework.views import APIView
 from teams.models import TeamMembership
 from .models import Task, TaskActivity
 from .serializers import TaskActivitySerializer, TaskSerializer
+from .realtime import publish_task_event
 
 
 class TaskListCreateView(generics.ListCreateAPIView):
@@ -29,6 +30,7 @@ class TaskListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         task = serializer.save(creator=self.request.user)
         TaskActivity.objects.create(task=task, actor=self.request.user, event=TaskActivity.Event.CREATED)
+        transaction.on_commit(lambda: publish_task_event(task, "task.created"))
 
 
 class TaskDetailView(generics.RetrieveUpdateAPIView):
@@ -52,6 +54,8 @@ class TaskDetailView(generics.RetrieveUpdateAPIView):
             event = TaskActivity.Event.COMPLETED if updated.status == Task.Status.COMPLETED else TaskActivity.Event.STATUS_CHANGED
             TaskActivity.objects.create(task=updated, actor=self.request.user, event=event, previous_value={"status": old_status}, new_value={"status": updated.status})
 
+        transaction.on_commit(lambda: publish_task_event(updated, "task.updated"))
+
 
 class TaskClaimView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -74,6 +78,7 @@ class TaskClaimView(APIView):
         task.status = Task.Status.IN_PROGRESS
         task.save(update_fields=("assignee", "status", "updated_at"))
         TaskActivity.objects.create(task=task, actor=request.user, event=TaskActivity.Event.CLAIMED, previous_value={"assignee_id": None, "status": Task.Status.PENDING}, new_value={"assignee_id": request.user.id, "status": Task.Status.IN_PROGRESS})
+        transaction.on_commit(lambda: publish_task_event(task, "task.claimed"))
         return Response(TaskSerializer(task, context={"request": request}).data, status=status.HTTP_200_OK)
 
 
