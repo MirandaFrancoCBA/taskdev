@@ -154,3 +154,33 @@ class TaskApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         task.refresh_from_db()
         self.assertIsNone(task.assignee)
+
+
+    def test_member_cannot_change_another_members_task_status(self):
+        task = Task.objects.create(title="Someone else's work", team=self.team, creator=self.coordinator, assignee=self.member2, status=Task.Status.IN_PROGRESS)
+        self.client.force_authenticate(self.member)
+        response = self.client.patch(f"/api/tasks/{task.id}/", {"status": Task.Status.COMPLETED}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        task.refresh_from_db()
+        self.assertEqual(task.status, Task.Status.IN_PROGRESS)
+        self.assertFalse(task.activities.exists())
+
+    def test_member_cannot_change_unassigned_task_status(self):
+        task = Task.objects.create(title="Pool work", team=self.team, creator=self.coordinator)
+        self.client.force_authenticate(self.member)
+        response = self.client.patch(f"/api/tasks/{task.id}/", {"status": Task.Status.BLOCKED}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        task.refresh_from_db()
+        self.assertEqual(task.status, Task.Status.PENDING)
+        self.assertFalse(task.activities.exists())
+
+    def test_coordinator_can_change_members_task_status(self):
+        task = Task.objects.create(title="Managed work", team=self.team, creator=self.coordinator, assignee=self.member, status=Task.Status.IN_PROGRESS)
+        self.client.force_authenticate(self.coordinator)
+        response = self.client.patch(f"/api/tasks/{task.id}/", {"status": Task.Status.BLOCKED}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        task.refresh_from_db()
+        self.assertEqual(task.status, Task.Status.BLOCKED)
+        activity = task.activities.get()
+        self.assertEqual(activity.actor, self.coordinator)
+        self.assertEqual(activity.event, "status_changed")
