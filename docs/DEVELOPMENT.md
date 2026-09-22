@@ -59,7 +59,7 @@ The WebSocket URL is derived from `API_BASE_URL`, switching `http→ws` and `htt
 
 ## 4. Seed a two-user validation scenario
 
-The current Flutter MVP login temporarily expects both the authenticated user ID and team ID. The quickest deterministic setup is Django shell:
+The Flutter client discovers the authenticated user and their teams automatically. The quickest deterministic setup for two accounts is Django shell:
 
 ```bash
 python manage.py shell
@@ -81,8 +81,6 @@ Task.objects.create(title="Prepare shipment", team=team, creator=coord, priority
 print("team", team.id, "coord", coord.id, "member", member.id)
 ```
 
-Use the printed IDs in two Flutter clients.
-
 ## 5. End-to-end checklist
 
 1. Sign in as `coord` in client A and `member` in client B.
@@ -95,10 +93,16 @@ Use the printed IDs in two Flutter clients.
 
 ## Known MVP limitations
 
-- Flutter login currently asks for team ID and user ID instead of discovering them after authentication.
-- Access tokens are kept in memory; secure persistent credential storage/logout is not implemented yet.
+- Access and refresh tokens are persisted with platform secure storage; server-side refresh-token revocation/blacklisting is not implemented yet.
 - WebSocket authentication passes the short-lived access token in the query string. Production deployment must use TLS and should move to a safer transport/authentication strategy where practical.
 - There is no push notification support.
 - Task creation/coordination UI is not implemented in Flutter; validation data can be created through the REST API or Django shell.
-- Direct assignment/update authorization is intentionally basic and should be tightened before production use.
 - Automated tests exist in the repository, but this checklist still requires execution in a local environment; repository edits alone do not prove runtime validation.
+
+## Continuous integration
+
+Pull requests and pushes to `main` run `.github/workflows/ci.yml`.
+
+The backend job starts PostgreSQL 17 and Redis 7, installs Python dependencies, runs Django system checks, verifies that migrations are committed, applies migrations and runs the Django test suite.
+
+The Flutter job installs the stable Flutter SDK, restores packages, runs `flutter analyze` and runs `flutter test`. A failing command fails the corresponding GitHub Actions job and is visible on the commit/pull request.
