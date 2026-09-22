@@ -161,6 +161,7 @@ class _CreateTaskDialogState extends State<_CreateTaskDialog> {
   final description = TextEditingController();
   String priority = 'medium';
   int? assignee;
+  DateTime? dueDate;
   bool saving = false;
   String? error;
 
@@ -171,7 +172,7 @@ class _CreateTaskDialogState extends State<_CreateTaskDialog> {
     }
     setState(() { saving = true; error = null; });
     try {
-      await widget.service.createTask(teamId: widget.team.id, title: title.text.trim(), description: description.text.trim(), priority: priority, assignee: assignee);
+      await widget.service.createTask(teamId: widget.team.id, title: title.text.trim(), description: description.text.trim(), priority: priority, assignee: assignee, dueDate: dueDate);
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
       if (mounted) setState(() => error = e.toString());
@@ -199,6 +200,7 @@ class _CreateTaskDialogState extends State<_CreateTaskDialog> {
         DropdownMenuItem(value: 'high', child: Text('High')),
         DropdownMenuItem(value: 'urgent', child: Text('Urgent')),
       ], onChanged: saving ? null : (value) => setState(() => priority = value ?? 'medium')),
+      ListTile(contentPadding: EdgeInsets.zero, title: const Text('Due date'), subtitle: Text(dueDate == null ? 'No due date' : MaterialLocalizations.of(context).formatMediumDate(dueDate!)), trailing: Row(mainAxisSize: MainAxisSize.min, children: [if (dueDate != null) IconButton(tooltip: 'Clear due date', onPressed: saving ? null : () => setState(() => dueDate = null), icon: const Icon(Icons.clear)), IconButton(tooltip: 'Choose due date', onPressed: saving ? null : () async { final picked = await showDatePicker(context: context, initialDate: dueDate ?? DateTime.now(), firstDate: DateTime.now(), lastDate: DateTime.now().add(const Duration(days: 3650))); if (picked != null && mounted) setState(() => dueDate = picked); }, icon: const Icon(Icons.calendar_today))])),
       DropdownButtonFormField<int?>(initialValue: assignee, decoration: const InputDecoration(labelText: 'Assign to'), items: [
         const DropdownMenuItem<int?>(value: null, child: Text('Shared pool')),
         ...widget.team.members.map((member) => DropdownMenuItem<int?>(value: member.userId, child: Text(member.username))),
