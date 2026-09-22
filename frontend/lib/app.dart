@@ -1,10 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import 'features/home/home_screen.dart';
+
+import 'core/api/api_client.dart';
+import 'features/auth/login_screen.dart';
 
 class TaskDevApp extends StatelessWidget {
   const TaskDevApp({super.key});
-  static final GoRouter _router = GoRouter(routes: [GoRoute(path: '/', builder: (context, state) => const HomeScreen())]);
+
   @override
-  Widget build(BuildContext context) => MaterialApp.router(title: 'TaskDev', debugShowCheckedModeBanner: false, theme: ThemeData(useMaterial3: true), routerConfig: _router);
+  Widget build(BuildContext context) {
+    final api = ApiClient();
+    return MaterialApp(
+      title: 'TaskDev',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(useMaterial3: true),
+      home: LoginScreen(api: api),
+    );
+  }
 }

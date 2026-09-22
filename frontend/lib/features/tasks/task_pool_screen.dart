@@ -1,0 +1,118 @@
+import 'package:flutter/material.dart';
+
+import '../../core/api/api_client.dart';
+import 'task.dart';
+import 'task_service.dart';
+
+class TaskPoolScreen extends StatefulWidget {
+  const TaskPoolScreen({super.key, required this.teamId, required this.userId, required this.api});
+  final int teamId;
+  final int userId;
+  final ApiClient api;
+
+  @override
+  State<TaskPoolScreen> createState() => _TaskPoolScreenState();
+}
+
+class _TaskPoolScreenState extends State<TaskPoolScreen> {
+  late final TaskService service = TaskService(widget.api);
+  List<Task> tasks = const [];
+  bool loading = true;
+  String? error;
+
+  @override
+  void initState() {
+    super.initState();
+    refresh();
+  }
+
+  Future<void> refresh() async {
+    setState(() { loading = true; error = null; });
+    try {
+      final result = await service.listTasks(widget.teamId);
+      if (mounted) setState(() => tasks = result);
+    } catch (e) {
+      if (mounted) setState(() => error = e.toString());
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  Future<void> claim(Task task) async {
+    try {
+      await service.claim(task.id);
+      await refresh();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+    }
+  }
+
+  Future<void> changeStatus(Task task, String status) async {
+    try {
+      await service.setStatus(task.id, status);
+      await refresh();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (loading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (error != null) return Scaffold(appBar: AppBar(title: const Text('TaskDev')), body: Center(child: Padding(padding: const EdgeInsets.all(24), child: Column(mainAxisSize: MainAxisSize.min, children: [Text(error!), const SizedBox(height: 16), FilledButton(onPressed: refresh, child: const Text('Retry'))]))));
+
+    final available = tasks.where((task) => task.assignee == null && task.status == 'pending').toList();
+    final mine = tasks.where((task) => task.assignee == widget.userId && task.status != 'completed').toList();
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('TaskDev'), actions: [IconButton(onPressed: refresh, icon: const Icon(Icons.refresh))]),
+      body: RefreshIndicator(
+        onRefresh: refresh,
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            Text('My work', style: Theme.of(context).textTheme.headlineSmall),
+            const SizedBox(height: 8),
+            if (mine.isEmpty) const _EmptyCard(message: 'You have no active tasks.'),
+            ...mine.map((task) => _TaskCard(task: task, action: PopupMenuButton<String>(onSelected: (value) => changeStatus(task, value), itemBuilder: (_) => const [PopupMenuItem(value: 'in_progress', child: Text('In progress')), PopupMenuItem(value: 'blocked', child: Text('Blocked')), PopupMenuItem(value: 'completed', child: Text('Complete'))], child: const Padding(padding: EdgeInsets.all(8), child: Text('Update'))))),
+            const SizedBox(height: 24),
+            Text('Available', style: Theme.of(context).textTheme.headlineSmall),
+            const SizedBox(height: 8),
+            if (available.isEmpty) const _EmptyCard(message: 'No tasks are waiting in the pool.'),
+            ...available.map((task) => _TaskCard(task: task, action: FilledButton(onPressed: () => claim(task), child: const Text('Take')))),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TaskCard extends StatelessWidget {
+  const _TaskCard({required this.task, required this.action});
+  final Task task;
+  final Widget action;
+
+  @override
+  Widget build(BuildContext context) => Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(task.title, style: Theme.of(context).textTheme.titleMedium),
+              if (task.description.isNotEmpty) ...[const SizedBox(height: 6), Text(task.description)],
+              const SizedBox(height: 8),
+              Text('${task.priority.toUpperCase()} · ${task.status.replaceAll('_', ' ')}', style: Theme.of(context).textTheme.labelMedium),
+            ])),
+            const SizedBox(width: 12),
+            action,
+          ]),
+        ),
+      );
+}
+
+class _EmptyCard extends StatelessWidget {
+  const _EmptyCard({required this.message});
+  final String message;
+  @override
+  Widget build(BuildContext context) => Card(child: Padding(padding: const EdgeInsets.all(20), child: Text(message)));
+}
