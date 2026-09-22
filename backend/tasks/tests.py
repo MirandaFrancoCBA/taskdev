@@ -121,3 +121,36 @@ class TaskApiTests(APITestCase):
         response = self.client.get(f"/api/tasks/{task.id}/activity/")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 0)
+
+
+    def test_member_cannot_assign_task_through_patch(self):
+        task = Task.objects.create(title="Available", team=self.team, creator=self.coordinator)
+        self.client.force_authenticate(self.member)
+        response = self.client.patch(f"/api/tasks/{task.id}/", {"assignee": self.member.id}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        task.refresh_from_db()
+        self.assertIsNone(task.assignee)
+
+    def test_member_cannot_assign_another_member(self):
+        task = Task.objects.create(title="Available", team=self.team, creator=self.coordinator)
+        self.client.force_authenticate(self.member)
+        response = self.client.patch(f"/api/tasks/{task.id}/", {"assignee": self.member2.id}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        task.refresh_from_db()
+        self.assertIsNone(task.assignee)
+
+    def test_coordinator_can_assign_team_member(self):
+        task = Task.objects.create(title="Assigned work", team=self.team, creator=self.coordinator)
+        self.client.force_authenticate(self.coordinator)
+        response = self.client.patch(f"/api/tasks/{task.id}/", {"assignee": self.member.id}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        task.refresh_from_db()
+        self.assertEqual(task.assignee, self.member)
+
+    def test_coordinator_cannot_assign_outsider(self):
+        task = Task.objects.create(title="Assigned work", team=self.team, creator=self.coordinator)
+        self.client.force_authenticate(self.coordinator)
+        response = self.client.patch(f"/api/tasks/{task.id}/", {"assignee": self.outsider.id}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        task.refresh_from_db()
+        self.assertIsNone(task.assignee)
