@@ -63,7 +63,7 @@ class TaskClaimView(APIView):
     @transaction.atomic
     def post(self, request, pk):
         try:
-            task = Task.objects.select_for_update().select_related("team", "assignee").get(pk=pk)
+            task = Task.objects.select_for_update(of=("self",)).select_related("team", "assignee").get(pk=pk)
         except Task.DoesNotExist:
             return Response({"detail": "Task not found."}, status=status.HTTP_404_NOT_FOUND)
 

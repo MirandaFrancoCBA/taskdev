@@ -31,8 +31,8 @@ class ApiClient {
     return response;
   }
 
-  Future<Map<String, dynamic>> post(String path, [Map<String, dynamic>? body], {bool retry = true}) async {
-    final response = await _send(() => _client.post(Uri.parse('${AppConfig.apiBaseUrl}$path'), headers: _headers, body: jsonEncode(body ?? {})), retry: retry);
+  Future<Map<String, dynamic>> post(String path, Map<String, dynamic> body, {bool retry = true}) async {
+    final response = await _send(() => _client.post(Uri.parse('${AppConfig.apiBaseUrl}$path'), headers: _headers, body: jsonEncode(body)), retry: retry);
     return _decodeObject(response);
   }
 
