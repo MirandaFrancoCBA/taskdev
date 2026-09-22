@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../core/api/api_client.dart';
+import '../auth/auth_service.dart';
+import '../auth/login_screen.dart';
 import 'task.dart';
 import 'task_service.dart';
 import 'task_realtime_service.dart';
@@ -86,7 +88,7 @@ class _TaskPoolScreenState extends State<TaskPoolScreen> {
     final mine = tasks.where((task) => task.assignee == widget.userId && task.status != 'completed').toList();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('TaskDev'), actions: [IconButton(onPressed: refresh, icon: const Icon(Icons.refresh))]),
+      appBar: AppBar(title: const Text('TaskDev'), actions: [IconButton(onPressed: refresh, icon: const Icon(Icons.refresh)), IconButton(tooltip: 'Log out', onPressed: () async { await AuthService(widget.api).logout(); if (!context.mounted) return; Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => LoginScreen(api: widget.api)), (_) => false); }, icon: const Icon(Icons.logout))]),
       body: RefreshIndicator(
         onRefresh: refresh,
         child: ListView(
