@@ -29,7 +29,7 @@ class _LoginScreenState extends State<LoginScreen> {
         return;
       }
       final destination = auth.teams.length == 1
-          ? TaskPoolScreen(teamId: auth.teams.single.id, userId: auth.userId, api: widget.api)
+          ? TaskPoolScreen(team: auth.teams.single, userId: auth.userId, api: widget.api)
           : TeamSelectionScreen(api: widget.api, userId: auth.userId, teams: auth.teams);
       Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => destination));
     } catch (e) {
