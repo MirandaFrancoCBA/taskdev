@@ -19,6 +19,8 @@ class TaskSerializer(serializers.ModelSerializer):
         assignee = attrs.get("assignee", getattr(self.instance, "assignee", None))
         assignee_was_submitted = "assignee" in attrs
         status_was_submitted = "status" in attrs
+        if self.instance is not None and "team" in attrs and attrs["team"].pk != self.instance.team_id:
+            raise serializers.ValidationError({"team": "A task cannot be moved to another team after creation."})
         if team and not TeamMembership.objects.filter(team=team, user=request.user).exists():
             raise serializers.ValidationError({"team": "You are not a member of this team."})
         if assignee_was_submitted and team:

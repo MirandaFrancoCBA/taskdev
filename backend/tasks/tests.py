@@ -184,3 +184,24 @@ class TaskApiTests(APITestCase):
         activity = task.activities.get()
         self.assertEqual(activity.actor, self.coordinator)
         self.assertEqual(activity.event, "status_changed")
+
+
+    def test_member_cannot_move_task_to_another_team(self):
+        other_team = Team.objects.create(name="Other", created_by=self.member)
+        TeamMembership.objects.create(team=other_team, user=self.member, role=TeamMembership.Role.COORDINATOR)
+        task = Task.objects.create(title="Stay put", team=self.team, creator=self.coordinator, assignee=self.member, status=Task.Status.IN_PROGRESS)
+        self.client.force_authenticate(self.member)
+        response = self.client.patch(f"/api/tasks/{task.id}/", {"team": other_team.id}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        task.refresh_from_db()
+        self.assertEqual(task.team, self.team)
+
+    def test_coordinator_cannot_move_task_to_another_team(self):
+        other_team = Team.objects.create(name="Other", created_by=self.coordinator)
+        TeamMembership.objects.create(team=other_team, user=self.coordinator, role=TeamMembership.Role.COORDINATOR)
+        task = Task.objects.create(title="Stay put", team=self.team, creator=self.coordinator)
+        self.client.force_authenticate(self.coordinator)
+        response = self.client.patch(f"/api/tasks/{task.id}/", {"team": other_team.id}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        task.refresh_from_db()
+        self.assertEqual(task.team, self.team)
