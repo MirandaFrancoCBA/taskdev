@@ -4,8 +4,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from teams.models import TeamMembership
-from .models import Task
-from .serializers import TaskSerializer
+from .models import Task, TaskActivity
+from .serializers import TaskActivitySerializer, TaskSerializer
 
 
 class TaskListCreateView(generics.ListCreateAPIView):
@@ -25,8 +25,10 @@ class TaskListCreateView(generics.ListCreateAPIView):
             queryset = queryset.filter(assignee__isnull=True, status=Task.Status.PENDING)
         return queryset
 
+    @transaction.atomic
     def perform_create(self, serializer):
-        serializer.save(creator=self.request.user)
+        task = serializer.save(creator=self.request.user)
+        TaskActivity.objects.create(task=task, actor=self.request.user, event=TaskActivity.Event.CREATED)
 
 
 class TaskDetailView(generics.RetrieveUpdateAPIView):
@@ -35,6 +37,20 @@ class TaskDetailView(generics.RetrieveUpdateAPIView):
 
     def get_queryset(self):
         return Task.objects.filter(team__memberships__user=self.request.user).select_related("team", "creator", "assignee").distinct()
+
+    @transaction.atomic
+    def perform_update(self, serializer):
+        task = self.get_object()
+        old_status = task.status
+        old_assignee_id = task.assignee_id
+        updated = serializer.save()
+
+        if old_assignee_id != updated.assignee_id:
+            TaskActivity.objects.create(task=updated, actor=self.request.user, event=TaskActivity.Event.ASSIGNEE_CHANGED, previous_value={"assignee_id": old_assignee_id}, new_value={"assignee_id": updated.assignee_id})
+
+        if old_status != updated.status:
+            event = TaskActivity.Event.COMPLETED if updated.status == Task.Status.COMPLETED else TaskActivity.Event.STATUS_CHANGED
+            TaskActivity.objects.create(task=updated, actor=self.request.user, event=event, previous_value={"status": old_status}, new_value={"status": updated.status})
 
 
 class TaskClaimView(APIView):
@@ -49,15 +65,21 @@ class TaskClaimView(APIView):
 
         if not TeamMembership.objects.filter(team=task.team, user=request.user).exists():
             return Response({"detail": "Task not found."}, status=status.HTTP_404_NOT_FOUND)
-
         if task.status != Task.Status.PENDING:
             return Response({"detail": "Only pending tasks can be claimed."}, status=status.HTTP_409_CONFLICT)
-
         if task.assignee_id is not None:
             return Response({"detail": "Task has already been claimed."}, status=status.HTTP_409_CONFLICT)
 
         task.assignee = request.user
         task.status = Task.Status.IN_PROGRESS
         task.save(update_fields=("assignee", "status", "updated_at"))
-
+        TaskActivity.objects.create(task=task, actor=request.user, event=TaskActivity.Event.CLAIMED, previous_value={"assignee_id": None, "status": Task.Status.PENDING}, new_value={"assignee_id": request.user.id, "status": Task.Status.IN_PROGRESS})
         return Response(TaskSerializer(task, context={"request": request}).data, status=status.HTTP_200_OK)
+
+
+class TaskActivityListView(generics.ListAPIView):
+    serializer_class = TaskActivitySerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return TaskActivity.objects.filter(task_id=self.kwargs["pk"], task__team__memberships__user=self.request.user).select_related("actor").distinct()
