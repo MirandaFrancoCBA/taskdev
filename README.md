@@ -19,7 +19,7 @@ The first usable version will support authentication, teams and memberships, rol
 
 See [MVP scope](docs/MVP.md) and [architecture](docs/ARCHITECTURE.md).
 
-## Proposed stack
+## Stack
 
 - **Client:** Flutter / Dart (Android, iOS and Web)
 - **API:** Django + Django REST Framework
@@ -28,7 +28,7 @@ See [MVP scope](docs/MVP.md) and [architecture](docs/ARCHITECTURE.md).
 - **Messaging/cache:** Redis
 - **Development/deployment:** Docker
 
-## Planned repository structure
+## Repository structure
 
 ```text
 taskdev/
@@ -48,6 +48,8 @@ Work should be incremental: each issue describes a small, verifiable outcome wit
 
 ## Status
 
-**Phase 0 — Product definition and foundation.**
+**MVP implementation complete — end-to-end runtime validation prepared.**
+
+The initial backend, Flutter task workflow, atomic claiming, activity history and real-time synchronization are implemented. See [local development and MVP validation](docs/DEVELOPMENT.md) for the reproducible two-user scenario and current limitations.
 
 TaskDev is a MasseDev project.
