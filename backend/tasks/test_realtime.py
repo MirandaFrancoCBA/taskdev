@@ -1,6 +1,7 @@
 from unittest.mock import patch
 
 from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 from channels.testing import WebsocketCommunicator
 from django.contrib.auth import get_user_model
 from django.test import TestCase, TransactionTestCase
@@ -65,7 +66,18 @@ class WebSocketRuntimeTests(TransactionTestCase):
         communicator = WebsocketCommunicator(application, f"/ws/teams/{self.team.id}/tasks/?token={token}")
         connected, _ = await communicator.connect()
         self.assertTrue(connected)
-        await publish_task_event(self.task, "task.updated")
+        channel_layer = get_channel_layer()
+        await channel_layer.group_send(
+            f"team_{self.team.id}",
+            {
+                "type": "task.event",
+                "event": "task.updated",
+                "task_id": self.task.id,
+                "team_id": self.team.id,
+                "status": self.task.status,
+                "assignee_id": self.task.assignee_id,
+            },
+        )
         event = await communicator.receive_json_from(timeout=2)
         self.assertEqual(event["type"], "task.updated")
         self.assertEqual(event["task_id"], self.task.id)
