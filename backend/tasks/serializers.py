@@ -18,12 +18,18 @@ class TaskSerializer(serializers.ModelSerializer):
         team = attrs.get("team", getattr(self.instance, "team", None))
         assignee = attrs.get("assignee", getattr(self.instance, "assignee", None))
         assignee_was_submitted = "assignee" in attrs
+        status_was_submitted = "status" in attrs
         if team and not TeamMembership.objects.filter(team=team, user=request.user).exists():
             raise serializers.ValidationError({"team": "You are not a member of this team."})
         if assignee_was_submitted and team:
             is_coordinator = TeamMembership.objects.filter(team=team, user=request.user, role=TeamMembership.Role.COORDINATOR).exists()
             if not is_coordinator:
                 raise serializers.ValidationError({"assignee": "Only coordinators can directly assign tasks. Use the claim endpoint to take available work."})
+        if status_was_submitted and self.instance is not None and team:
+            is_coordinator = TeamMembership.objects.filter(team=team, user=request.user, role=TeamMembership.Role.COORDINATOR).exists()
+            is_assignee = self.instance.assignee_id == request.user.id
+            if not is_coordinator and not is_assignee:
+                raise serializers.ValidationError({"status": "Only the assignee or a coordinator can change task status."})
         if assignee and team and not TeamMembership.objects.filter(team=team, user=assignee).exists():
             raise serializers.ValidationError({"assignee": "Assignee must belong to the task team."})
         return attrs
