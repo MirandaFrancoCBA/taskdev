@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'core/api/api_client.dart';
-import 'features/auth/login_screen.dart';
+import 'features/auth/session_gate.dart';
 
 class TaskDevApp extends StatelessWidget {
   const TaskDevApp({super.key});
@@ -13,7 +13,7 @@ class TaskDevApp extends StatelessWidget {
       title: 'TaskDev',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(useMaterial3: true),
-      home: LoginScreen(api: api),
+      home: SessionGate(api: api),
     );
   }
 }
