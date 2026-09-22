@@ -43,6 +43,8 @@ flutter analyze
 flutter test
 ```
 
+CI performs the same runner generation and also builds the Web target in release mode, giving the client a compile/build gate in addition to analysis and tests.
+
 Run on desktop/web against localhost:
 
 ```bash
@@ -54,6 +56,8 @@ For the standard Android emulator use:
 ```bash
 flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000/api
 ```
+
+For a physical phone, run Django on `0.0.0.0:8000`, connect the phone and development machine to the same trusted LAN, and use the computer's LAN IP instead of localhost, for example `http://192.168.1.50:8000/api`. Replace that example with the actual address of the development machine.
 
 The WebSocket URL is derived from `API_BASE_URL`, switching `http→ws` and `https→wss`.
 
@@ -97,7 +101,7 @@ print("team", team.id, "coord", coord.id, "member", member.id)
 - WebSocket authentication passes the short-lived access token in the query string. Production deployment must use TLS and should move to a safer transport/authentication strategy where practical.
 - There is no push notification support.
 - Task creation/coordination UI is not implemented in Flutter; validation data can be created through the REST API or Django shell.
-- Automated tests exist in the repository, but this checklist still requires execution in a local environment; repository edits alone do not prove runtime validation.
+- Backend runtime and Flutter build/test paths are automated in CI. The two-client visual/device checklist still requires a real browser, emulator, or physical device.
 
 ## Continuous integration
 
@@ -105,4 +109,4 @@ Pull requests and pushes to `main` run `.github/workflows/ci.yml`.
 
 The backend job starts PostgreSQL 17 and Redis 7, installs Python dependencies, runs Django system checks, verifies that migrations are committed, applies migrations and runs the Django test suite.
 
-The Flutter job installs the stable Flutter SDK, restores packages, runs `flutter analyze` and runs `flutter test`. A failing command fails the corresponding GitHub Actions job and is visible on the commit/pull request.
+The Flutter job installs the stable Flutter SDK, generates the standard Android/iOS/Web runner scaffolding, restores packages, runs `flutter analyze`, runs `flutter test`, and produces a release Web build. A failing command fails the corresponding GitHub Actions job and is visible on the commit/pull request.
