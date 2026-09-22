@@ -19,6 +19,8 @@ class TaskSerializer(serializers.ModelSerializer):
         assignee = attrs.get("assignee", getattr(self.instance, "assignee", None))
         assignee_was_submitted = "assignee" in attrs
         status_was_submitted = "status" in attrs
+        metadata_fields = {"title", "description", "priority", "due_date"}
+        metadata_was_submitted = bool(metadata_fields.intersection(attrs))
         if self.instance is not None and "team" in attrs and attrs["team"].pk != self.instance.team_id:
             raise serializers.ValidationError({"team": "A task cannot be moved to another team after creation."})
         if team and not TeamMembership.objects.filter(team=team, user=request.user).exists():
@@ -27,6 +29,10 @@ class TaskSerializer(serializers.ModelSerializer):
             is_coordinator = TeamMembership.objects.filter(team=team, user=request.user, role=TeamMembership.Role.COORDINATOR).exists()
             if not is_coordinator:
                 raise serializers.ValidationError({"assignee": "Only coordinators can directly assign tasks. Use the claim endpoint to take available work."})
+        if metadata_was_submitted and self.instance is not None and team:
+            is_coordinator = TeamMembership.objects.filter(team=team, user=request.user, role=TeamMembership.Role.COORDINATOR).exists()
+            if not is_coordinator:
+                raise serializers.ValidationError({"detail": "Only coordinators can edit task metadata."})
         if status_was_submitted and self.instance is not None and team:
             is_coordinator = TeamMembership.objects.filter(team=team, user=request.user, role=TeamMembership.Role.COORDINATOR).exists()
             is_assignee = self.instance.assignee_id == request.user.id
