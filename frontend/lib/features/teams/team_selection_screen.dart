@@ -22,7 +22,7 @@ class TeamSelectionScreen extends StatelessWidget {
         return Card(child: ListTile(
           title: Text(team.name),
           trailing: const Icon(Icons.chevron_right),
-          onTap: () => Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => TaskPoolScreen(teamId: team.id, userId: userId, api: api))),
+          onTap: () => Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => TaskPoolScreen(team: team, userId: userId, api: api))),
         ));
       },
     ),
