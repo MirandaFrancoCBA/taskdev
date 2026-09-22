@@ -87,4 +87,8 @@ class TaskActivityListView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return TaskActivity.objects.filter(task_id=self.kwargs["pk"], task__team__memberships__user=self.request.user).select_related("actor").distinct()
+        task = generics.get_object_or_404(
+            Task.objects.filter(team__memberships__user=self.request.user).distinct(),
+            pk=self.kwargs["pk"],
+        )
+        return TaskActivity.objects.filter(task=task).select_related("actor")

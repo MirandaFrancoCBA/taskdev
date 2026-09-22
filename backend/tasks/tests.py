@@ -119,8 +119,7 @@ class TaskApiTests(APITestCase):
         self.assertEqual(self.client.get(f"/api/tasks/{task.id}/activity/").status_code, status.HTTP_200_OK)
         self.client.force_authenticate(self.outsider)
         response = self.client.get(f"/api/tasks/{task.id}/activity/")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 0)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
 
     def test_member_cannot_assign_task_through_patch(self):
@@ -205,3 +204,9 @@ class TaskApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         task.refresh_from_db()
         self.assertEqual(task.team, self.team)
+
+
+    def test_missing_task_activity_returns_not_found(self):
+        self.client.force_authenticate(self.member)
+        response = self.client.get("/api/tasks/999999/activity/")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
