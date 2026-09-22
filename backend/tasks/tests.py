@@ -12,10 +12,12 @@ class TaskApiTests(APITestCase):
     def setUp(self):
         self.coordinator = User.objects.create_user(username="coord", password="pass-12345")
         self.member = User.objects.create_user(username="member", password="pass-12345")
+        self.member2 = User.objects.create_user(username="member2", password="pass-12345")
         self.outsider = User.objects.create_user(username="outsider", password="pass-12345")
         self.team = Team.objects.create(name="Operations", created_by=self.coordinator)
         TeamMembership.objects.create(team=self.team, user=self.coordinator, role=TeamMembership.Role.COORDINATOR)
         TeamMembership.objects.create(team=self.team, user=self.member)
+        TeamMembership.objects.create(team=self.team, user=self.member2)
 
     def test_member_can_create_unassigned_task(self):
         self.client.force_authenticate(self.member)
@@ -47,3 +49,36 @@ class TaskApiTests(APITestCase):
         self.client.force_authenticate(self.outsider)
         response = self.client.get(f"/api/tasks/{task.id}/")
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_member_can_claim_available_task(self):
+        task = Task.objects.create(title="Available", team=self.team, creator=self.coordinator)
+        self.client.force_authenticate(self.member)
+        response = self.client.post(f"/api/tasks/{task.id}/claim/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        task.refresh_from_db()
+        self.assertEqual(task.assignee, self.member)
+        self.assertEqual(task.status, Task.Status.IN_PROGRESS)
+
+    def test_second_claim_returns_conflict(self):
+        task = Task.objects.create(title="Available", team=self.team, creator=self.coordinator)
+        self.client.force_authenticate(self.member)
+        self.assertEqual(self.client.post(f"/api/tasks/{task.id}/claim/").status_code, status.HTTP_200_OK)
+        self.client.force_authenticate(self.member2)
+        response = self.client.post(f"/api/tasks/{task.id}/claim/")
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        task.refresh_from_db()
+        self.assertEqual(task.assignee, self.member)
+
+    def test_outsider_cannot_claim_task(self):
+        task = Task.objects.create(title="Available", team=self.team, creator=self.coordinator)
+        self.client.force_authenticate(self.outsider)
+        response = self.client.post(f"/api/tasks/{task.id}/claim/")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        task.refresh_from_db()
+        self.assertIsNone(task.assignee)
+
+    def test_non_pending_task_cannot_be_claimed(self):
+        task = Task.objects.create(title="Blocked", team=self.team, creator=self.coordinator, status=Task.Status.BLOCKED)
+        self.client.force_authenticate(self.member)
+        response = self.client.post(f"/api/tasks/{task.id}/claim/")
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
