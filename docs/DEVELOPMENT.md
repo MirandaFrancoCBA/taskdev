@@ -85,23 +85,24 @@ Task.objects.create(title="Prepare shipment", team=team, creator=coord, priority
 print("team", team.id, "coord", coord.id, "member", member.id)
 ```
 
-## 5. End-to-end checklist
+## 5. Final two-client smoke-test checklist
 
 1. Sign in as `coord` in client A and `member` in client B.
-2. Confirm both clients show **Prepare shipment** under Available.
-3. Press **Take** in client B. It should move into B's My work and disappear from A's Available list without manual refresh.
-4. Attempt to claim the same task from a stale/third client. The API must return HTTP 409 and preserve the first assignee.
-5. Change the task to Blocked, then In progress, then Complete. The other connected client should update after each committed change.
-6. Request `GET /api/tasks/{task_id}/activity/` with a team member JWT and confirm claim/status history is retained.
-7. Stop Redis temporarily. REST refresh and task commands should remain usable; real-time delivery pauses. Restart Redis and the Flutter reconnect strategy should restore live invalidation.
+2. As `coord`, create a task from the Flutter **New task** action, including priority and an optional due date. Confirm both clients receive the new task without manual refresh.
+3. Confirm an unassigned task appears under Available for both clients.
+4. Press **Take** in client B. It should move into B's My work and disappear from A's Available list without manual refresh.
+5. Attempt to claim the same task from a stale/third client. The API must return HTTP 409 and preserve the first assignee.
+6. Change the task to Blocked, then In progress, then Complete. The other connected client should update after each committed change.
+7. Request `GET /api/tasks/{task_id}/activity/` with a team member JWT and confirm claim/status history is retained.
+8. Stop Redis temporarily. REST refresh and task commands should remain usable; real-time delivery pauses. Restart Redis and the Flutter reconnect strategy should restore live invalidation.
 
 ## Known MVP limitations
 
 - Access and refresh tokens are persisted with platform secure storage; server-side refresh-token revocation/blacklisting is not implemented yet.
 - WebSocket authentication passes the short-lived access token in the query string. Production deployment must use TLS and should move to a safer transport/authentication strategy where practical.
 - There is no push notification support.
-- Task creation/coordination UI is not implemented in Flutter; validation data can be created through the REST API or Django shell.
-- Backend runtime and Flutter build/test paths are automated in CI. The two-client visual/device checklist still requires a real browser, emulator, or physical device.
+- Team creation/member administration remains API/backend-oriented; the MVP Flutter workflow focuses on selecting existing teams and coordinating their tasks.
+- Backend runtime, REST/WebSocket integration, Flutter analysis/tests, and a release Web build are automated in CI. The two-client graphical browser/emulator/device checklist has not been performed by CI and remains a manual release check.
 
 ## Continuous integration
 
