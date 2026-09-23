@@ -13,7 +13,9 @@ class TaskService {
   Future<Task> createTask({required int teamId, required String title, String description = '', String priority = 'medium', int? assignee, DateTime? dueDate}) async {
     final body = <String, dynamic>{'team': teamId, 'title': title, 'description': description, 'priority': priority};
     if (assignee != null) body['assignee'] = assignee;
-    if (dueDate != null) body['due_date'] = dueDate.toIso8601String();
+    if (dueDate != null) {
+      body['due_date'] = '${dueDate.year.toString().padLeft(4, '0')}-${dueDate.month.toString().padLeft(2, '0')}-${dueDate.day.toString().padLeft(2, '0')}';
+    }
     return Task.fromJson(await api.post('/tasks/', body));
   }
 
