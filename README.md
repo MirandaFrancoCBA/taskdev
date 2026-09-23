@@ -15,7 +15,7 @@ The core idea is simple: a team shares a live pool of work. Tasks can be assigne
 
 ## MVP
 
-The first usable version will support authentication, teams and memberships, roles, task creation, an unassigned task pool, direct assignment, claiming tasks, task statuses, priority, optional due dates, activity history and real-time updates.
+The MVP supports authentication, teams and memberships, coordinator/member roles, coordinator task creation, an unassigned task pool, direct assignment, atomic task claiming, task statuses, priority, optional due dates, activity history and real-time updates.
 
 See [MVP scope](docs/MVP.md) and [architecture](docs/ARCHITECTURE.md).
 
@@ -48,8 +48,8 @@ Work should be incremental: each issue describes a small, verifiable outcome wit
 
 ## Status
 
-**MVP implementation complete — end-to-end runtime validation prepared.**
+**MVP release candidate — automated validation is green; final two-client visual/device smoke testing remains manual.**
 
-The initial backend, Flutter task workflow, atomic claiming, activity history and real-time synchronization are implemented. See [local development and MVP validation](docs/DEVELOPMENT.md) for the reproducible two-user scenario and current limitations.
+The backend, coordinator/member Flutter workflow, atomic claiming, activity history, authorization hardening and real-time synchronization are implemented. See [local development and MVP validation](docs/DEVELOPMENT.md) for the reproducible two-user scenario and current limitations.
 
 TaskDev is a MasseDev project.
