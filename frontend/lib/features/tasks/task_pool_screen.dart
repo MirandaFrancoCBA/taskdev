@@ -30,7 +30,7 @@ class _TaskPoolScreenState extends State<TaskPoolScreen> {
     refresh();
     final token = widget.api.accessToken;
     if (token != null) {
-      realtime = TaskRealtimeService(teamId: widget.team.id, accessToken: token, onTaskEvent: _refreshFromRealtime)..connect();
+      realtime = TaskRealtimeService(teamId: widget.team.id, accessTokenProvider: () => widget.api.accessToken, onTaskEvent: _refreshFromRealtime)..connect();
     }
   }
 
