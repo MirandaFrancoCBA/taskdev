@@ -1,3 +1,4 @@
+import asyncio
 from unittest.mock import patch
 
 from asgiref.sync import async_to_sync
@@ -82,6 +83,36 @@ class WebSocketRuntimeTests(TransactionTestCase):
         self.assertEqual(event["type"], "task.updated")
         self.assertEqual(event["task_id"], self.task.id)
         self.assertEqual(event["team_id"], self.team.id)
+        await communicator.disconnect()
+
+    def test_member_stays_connected_while_idle(self):
+        async_to_sync(self._member_stays_connected_while_idle)()
+
+    async def _member_stays_connected_while_idle(self):
+        token = str(AccessToken.for_user(self.user))
+        communicator = WebsocketCommunicator(application, f"/ws/teams/{self.team.id}/tasks/?token={token}")
+        connected, _ = await communicator.connect()
+        self.assertTrue(connected)
+
+        # Regression coverage for redis-py 8's 5-second default socket timeout:
+        # the channel layer must survive an idle blocking receive before an event arrives.
+        await asyncio.sleep(6)
+
+        channel_layer = get_channel_layer()
+        await channel_layer.group_send(
+            f"team_{self.team.id}",
+            {
+                "type": "task.event",
+                "event": "task.updated",
+                "task_id": self.task.id,
+                "team_id": self.team.id,
+                "status": self.task.status,
+                "assignee_id": self.task.assignee_id,
+            },
+        )
+        event = await communicator.receive_json_from(timeout=2)
+        self.assertEqual(event["type"], "task.updated")
+        self.assertEqual(event["task_id"], self.task.id)
         await communicator.disconnect()
 
     def test_outsider_is_rejected(self):
