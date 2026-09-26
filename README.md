@@ -48,8 +48,8 @@ Work should be incremental: each issue describes a small, verifiable outcome wit
 
 ## Status
 
-**MVP release candidate — automated validation is green; final two-client visual/device smoke testing remains manual.**
+**MVP validated — automated CI is green and the final two-client browser smoke test has passed.**
 
-The backend, coordinator/member Flutter workflow, atomic claiming, activity history, authorization hardening and real-time synchronization are implemented. See [local development and MVP validation](docs/DEVELOPMENT.md) for the reproducible two-user scenario and current limitations.
+The backend, coordinator/member Flutter workflow, atomic claiming, activity history, authorization hardening and real-time synchronization are implemented and manually validated with two concurrent browser clients. See [local development and MVP validation](docs/DEVELOPMENT.md) for the reproducible two-user scenario and current limitations.
 
 TaskDev is a MasseDev project.
