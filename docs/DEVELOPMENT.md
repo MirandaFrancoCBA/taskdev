@@ -27,7 +27,7 @@ python -m venv .venv
 # activate .venv for your shell
 pip install -r requirements.txt
 python manage.py migrate
-python manage.py runserver 0.0.0.0:8000
+daphne -b 0.0.0.0 -p 8000 config.asgi:application
 ```
 
 Verify `GET http://127.0.0.1:8000/api/health/`.
@@ -57,7 +57,7 @@ For the standard Android emulator use:
 flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000/api
 ```
 
-For a physical phone, run Django on `0.0.0.0:8000`, connect the phone and development machine to the same trusted LAN, and use the computer's LAN IP instead of localhost, for example `http://192.168.1.50:8000/api`. Replace that example with the actual address of the development machine.
+For a physical phone, run Daphne on `0.0.0.0:8000`, connect the phone and development machine to the same trusted LAN, and use the computer's LAN IP instead of localhost, for example `http://192.168.1.50:8000/api`. Replace that example with the actual address of the development machine.
 
 The WebSocket URL is derived from `API_BASE_URL`, switching `http→ws` and `https→wss`.
 
@@ -96,13 +96,17 @@ print("team", team.id, "coord", coord.id, "member", member.id)
 7. Request `GET /api/tasks/{task_id}/activity/` with a team member JWT and confirm claim/status history is retained.
 8. Stop Redis temporarily. REST refresh and task commands should remain usable; real-time delivery pauses. Restart Redis and the Flutter reconnect strategy should restore live invalidation.
 
+## Final smoke-test result
+
+The two-client browser smoke test has been completed successfully. With redis-py 7.4.1, both clients remained connected over WebSockets beyond the previous 5-second failure window. Task creation, claiming and status changes propagated to the other client without manual refresh. The atomic claim conflict behavior had already been validated separately with competing clients.
+
 ## Known MVP limitations
 
 - Access and refresh tokens are persisted with platform secure storage; server-side refresh-token revocation/blacklisting is not implemented yet.
 - WebSocket authentication passes the short-lived access token in the query string. Production deployment must use TLS and should move to a safer transport/authentication strategy where practical.
 - There is no push notification support.
 - Team creation/member administration remains API/backend-oriented; the MVP Flutter workflow focuses on selecting existing teams and coordinating their tasks.
-- Backend runtime, REST/WebSocket integration, Flutter analysis/tests, and a release Web build are automated in CI. The two-client graphical browser/emulator/device checklist has not been performed by CI and remains a manual release check.
+- Backend runtime, REST/WebSocket integration, Flutter analysis/tests, and a release Web build are automated in CI. The two-client graphical browser smoke test is a manual release check and has been completed successfully for this MVP candidate.
 
 ## Continuous integration
 
