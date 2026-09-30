@@ -4,6 +4,7 @@ import '../../core/api/api_client.dart';
 import '../auth/auth_service.dart';
 import '../auth/login_screen.dart';
 import 'task.dart';
+import 'task_detail_screen.dart';
 import 'task_service.dart';
 import 'task_realtime_service.dart';
 
@@ -84,6 +85,10 @@ class _TaskPoolScreenState extends State<TaskPoolScreen> {
     if (created == true) await refresh();
   }
 
+  Future<void> _openTask(Task task) async {
+    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => TaskDetailScreen(task: task, service: service)));
+  }
+
   @override
   Widget build(BuildContext context) {
     if (loading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
@@ -103,12 +108,12 @@ class _TaskPoolScreenState extends State<TaskPoolScreen> {
             Text('My work', style: Theme.of(context).textTheme.headlineSmall),
             const SizedBox(height: 8),
             if (mine.isEmpty) const _EmptyCard(message: 'You have no active tasks.'),
-            ...mine.map((task) => _TaskCard(task: task, action: PopupMenuButton<String>(onSelected: (value) => changeStatus(task, value), itemBuilder: (_) => const [PopupMenuItem(value: 'in_progress', child: Text('In progress')), PopupMenuItem(value: 'blocked', child: Text('Blocked')), PopupMenuItem(value: 'completed', child: Text('Complete'))], child: const Padding(padding: EdgeInsets.all(8), child: Text('Update'))))),
+            ...mine.map((task) => _TaskCard(task: task, onTap: () => _openTask(task), action: PopupMenuButton<String>(onSelected: (value) => changeStatus(task, value), itemBuilder: (_) => const [PopupMenuItem(value: 'in_progress', child: Text('In progress')), PopupMenuItem(value: 'blocked', child: Text('Blocked')), PopupMenuItem(value: 'completed', child: Text('Complete'))], child: const Padding(padding: EdgeInsets.all(8), child: Text('Update'))))),
             const SizedBox(height: 24),
             Text('Available', style: Theme.of(context).textTheme.headlineSmall),
             const SizedBox(height: 8),
             if (available.isEmpty) const _EmptyCard(message: 'No tasks are waiting in the pool.'),
-            ...available.map((task) => _TaskCard(task: task, action: FilledButton(onPressed: () => claim(task), child: const Text('Take')))),
+            ...available.map((task) => _TaskCard(task: task, onTap: () => _openTask(task), action: FilledButton(onPressed: () => claim(task), child: const Text('Take')))),
           ],
         ),
       ),
@@ -117,13 +122,17 @@ class _TaskPoolScreenState extends State<TaskPoolScreen> {
 }
 
 class _TaskCard extends StatelessWidget {
-  const _TaskCard({required this.task, required this.action});
+  const _TaskCard({required this.task, required this.action, required this.onTap});
   final Task task;
   final Widget action;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) => Card(
-        child: Padding(
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: onTap,
+          child: Padding(
           padding: const EdgeInsets.all(16),
           child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -136,6 +145,7 @@ class _TaskCard extends StatelessWidget {
             action,
           ]),
         ),
+      ),
       );
 }
 
