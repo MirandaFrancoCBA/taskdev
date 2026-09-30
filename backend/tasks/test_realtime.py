@@ -64,7 +64,7 @@ class WebSocketRuntimeTests(TransactionTestCase):
 
     async def _member_receives_event(self):
         token = str(AccessToken.for_user(self.user))
-        communicator = WebsocketCommunicator(application, f"/ws/teams/{self.team.id}/tasks/?token={token}")
+        communicator = WebsocketCommunicator(application, f"/ws/teams/{self.team.id}/tasks/", subprotocols=["taskdev.jwt", token])
         connected, _ = await communicator.connect()
         self.assertTrue(connected)
         channel_layer = get_channel_layer()
@@ -124,3 +124,20 @@ class WebSocketRuntimeTests(TransactionTestCase):
         connected, code = await communicator.connect()
         self.assertFalse(connected)
         self.assertEqual(code, 4403)
+
+
+class WebSocketCredentialTransportTests(TestCase):
+    def test_query_string_token_remains_compatible_during_rollout(self):
+        from .consumers import websocket_token
+        token, protocol = websocket_token({"query_string": b"token=legacy-token", "subprotocols": []})
+        self.assertEqual(token, "legacy-token")
+        self.assertIsNone(protocol)
+
+    def test_subprotocol_token_is_preferred(self):
+        from .consumers import websocket_token
+        token, protocol = websocket_token({
+            "query_string": b"token=legacy-token",
+            "subprotocols": ["taskdev.jwt", "safer-token"],
+        })
+        self.assertEqual(token, "safer-token")
+        self.assertEqual(protocol, "taskdev.jwt")

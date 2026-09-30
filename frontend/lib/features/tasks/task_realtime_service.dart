@@ -21,9 +21,9 @@ class TaskRealtimeService {
     if (_disposed) return;
     final accessToken = accessTokenProvider();
     if (accessToken == null) return;
-    final uri = AppConfig.websocketUri(teamId, accessToken);
+    final uri = AppConfig.websocketUri(teamId);
     try {
-      _channel = WebSocketChannel.connect(uri);
+      _channel = WebSocketChannel.connect(uri, protocols: ['taskdev.jwt', accessToken]);
       _subscription = _channel!.stream.listen(_handleMessage, onError: (_) => _scheduleReconnect(), onDone: _scheduleReconnect);
       _attempt = 0;
     } catch (_) {

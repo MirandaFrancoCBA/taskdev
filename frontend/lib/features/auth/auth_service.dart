@@ -89,6 +89,14 @@ class AuthService {
   }
 
   Future<void> logout() async {
+    final refreshToken = await store.readRefresh();
+    if (api.accessToken != null && refreshToken != null) {
+      try {
+        await api.post('/auth/logout/', {'refresh': refreshToken}, retry: false);
+      } catch (_) {
+        // Local logout must still succeed if the server is unreachable.
+      }
+    }
     api.accessToken = null;
     await store.clear();
   }
