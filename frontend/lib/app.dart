@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'core/api/api_client.dart';
+import 'core/theme/masse_dev_theme.dart';
 import 'features/auth/session_gate.dart';
 
 class TaskDevApp extends StatelessWidget {
@@ -12,7 +13,7 @@ class TaskDevApp extends StatelessWidget {
     return MaterialApp(
       title: 'TaskDev',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(useMaterial3: true),
+      theme: TaskDevTheme.light,
       home: SessionGate(api: api),
     );
   }
