@@ -24,3 +24,30 @@ class AuthenticationTests(APITestCase):
     def test_me_requires_authentication(self):
         response = self.client.get("/api/auth/me/")
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+    def test_logout_blacklists_refresh_token(self):
+        User.objects.create_user(username="logout-member", password="strong-pass-123")
+        login = self.client.post("/api/auth/login/", {"username": "logout-member", "password": "strong-pass-123"}, format="json")
+        access = login.data["access"]
+        refresh = login.data["refresh"]
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {access}")
+
+        logout = self.client.post("/api/auth/logout/", {"refresh": refresh}, format="json")
+        self.assertEqual(logout.status_code, status.HTTP_204_NO_CONTENT)
+
+        self.client.credentials()
+        retry = self.client.post("/api/auth/refresh/", {"refresh": refresh}, format="json")
+        self.assertEqual(retry.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_refresh_rotates_token_and_blacklists_previous_refresh(self):
+        User.objects.create_user(username="rotate-member", password="strong-pass-123")
+        login = self.client.post("/api/auth/login/", {"username": "rotate-member", "password": "strong-pass-123"}, format="json")
+        original = login.data["refresh"]
+
+        rotated = self.client.post("/api/auth/refresh/", {"refresh": original}, format="json")
+        self.assertEqual(rotated.status_code, status.HTTP_200_OK)
+        self.assertIn("refresh", rotated.data)
+
+        retry = self.client.post("/api/auth/refresh/", {"refresh": original}, format="json")
+        self.assertEqual(retry.status_code, status.HTTP_401_UNAUTHORIZED)
