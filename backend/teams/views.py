@@ -1,6 +1,6 @@
 from django.db import transaction
 from rest_framework import generics, permissions
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import PermissionDenied, ValidationError
 
 from .models import Team, TeamMembership
 from .permissions import IsTeamMember, is_coordinator
@@ -42,3 +42,28 @@ class MembershipCreateView(generics.CreateAPIView):
         if not is_coordinator(self.request.user, team):
             raise PermissionDenied("Only coordinators can add team members.")
         serializer.save(team=team)
+
+
+class MembershipDetailView(generics.UpdateAPIView, generics.DestroyAPIView):
+    serializer_class = MembershipSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return TeamMembership.objects.filter(team_id=self.kwargs["team_id"]).select_related("team", "user")
+
+    def get_object(self):
+        membership = super().get_object()
+        if not is_coordinator(self.request.user, membership.team):
+            raise PermissionDenied("Only coordinators can manage team members.")
+        return membership
+
+    def perform_update(self, serializer):
+        membership = self.get_object()
+        if membership.user_id == self.request.user.id:
+            raise ValidationError({"detail": "Coordinators cannot change their own role from this endpoint."})
+        serializer.save(user=membership.user, team=membership.team)
+
+    def perform_destroy(self, instance):
+        if instance.user_id == self.request.user.id:
+            raise ValidationError({"detail": "Coordinators cannot remove themselves from this endpoint."})
+        instance.delete()

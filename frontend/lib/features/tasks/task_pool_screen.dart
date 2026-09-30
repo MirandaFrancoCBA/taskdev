@@ -5,6 +5,7 @@ import '../../core/theme/masse_dev_theme.dart';
 import '../../core/theme/taskdev_page.dart';
 import '../auth/auth_service.dart';
 import '../auth/login_screen.dart';
+import '../teams/team_members_screen.dart';
 import 'task.dart';
 import 'task_detail_screen.dart';
 import 'task_realtime_service.dart';
@@ -118,6 +119,7 @@ class _TaskPoolScreenState extends State<TaskPoolScreen> {
     return TaskDevPage(
       title: widget.team.name,
       actions: [
+        if (widget.team.role == 'coordinator') IconButton(tooltip: 'Manage members', onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => TeamMembersScreen(api: widget.api, team: widget.team, userId: widget.userId))), icon: const Icon(Icons.group_outlined)),
         IconButton(tooltip: 'Refresh', onPressed: loading ? null : refresh, icon: const Icon(Icons.refresh)),
         IconButton(tooltip: 'Log out', onPressed: _logout, icon: const Icon(Icons.logout)),
       ],

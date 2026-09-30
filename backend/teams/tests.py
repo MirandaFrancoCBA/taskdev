@@ -44,3 +44,46 @@ class TeamApiTests(APITestCase):
         response = self.client.post(f"/api/teams/{team.id}/members/", {"user": self.member.id, "role": "member"}, format="json")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(team.memberships.filter(user=self.member).exists())
+
+
+    def test_coordinator_can_change_member_role(self):
+        team = Team.objects.create(name="Operations", created_by=self.coordinator)
+        TeamMembership.objects.create(team=team, user=self.coordinator, role=TeamMembership.Role.COORDINATOR)
+        membership = TeamMembership.objects.create(team=team, user=self.member)
+        self.authenticate(self.coordinator)
+        response = self.client.patch(
+            f"/api/teams/{team.id}/members/{membership.id}/",
+            {"role": TeamMembership.Role.COORDINATOR},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        membership.refresh_from_db()
+        self.assertEqual(membership.role, TeamMembership.Role.COORDINATOR)
+
+    def test_member_cannot_manage_membership(self):
+        team = Team.objects.create(name="Operations", created_by=self.coordinator)
+        TeamMembership.objects.create(team=team, user=self.coordinator, role=TeamMembership.Role.COORDINATOR)
+        actor = TeamMembership.objects.create(team=team, user=self.member)
+        target = TeamMembership.objects.create(team=team, user=self.outsider)
+        self.authenticate(self.member)
+        response = self.client.patch(
+            f"/api/teams/{team.id}/members/{target.id}/",
+            {"role": TeamMembership.Role.COORDINATOR},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        actor.refresh_from_db()
+
+    def test_coordinator_can_remove_member_but_not_self(self):
+        team = Team.objects.create(name="Operations", created_by=self.coordinator)
+        coordinator_membership = TeamMembership.objects.create(team=team, user=self.coordinator, role=TeamMembership.Role.COORDINATOR)
+        member_membership = TeamMembership.objects.create(team=team, user=self.member)
+        self.authenticate(self.coordinator)
+
+        response = self.client.delete(f"/api/teams/{team.id}/members/{member_membership.id}/")
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(TeamMembership.objects.filter(pk=member_membership.id).exists())
+
+        response = self.client.delete(f"/api/teams/{team.id}/members/{coordinator_membership.id}/")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertTrue(TeamMembership.objects.filter(pk=coordinator_membership.id).exists())

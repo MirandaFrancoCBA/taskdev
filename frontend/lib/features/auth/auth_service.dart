@@ -23,11 +23,12 @@ class TeamSummary {
 }
 
 class TeamMember {
-  const TeamMember({required this.userId, required this.username, required this.role});
+  const TeamMember({required this.id, required this.userId, required this.username, required this.role});
+  final int id;
   final int userId;
   final String username;
   final String role;
-  factory TeamMember.fromJson(Map<String, dynamic> json) => TeamMember(userId: json['user'] as int, username: json['username'] as String, role: json['role'] as String);
+  factory TeamMember.fromJson(Map<String, dynamic> json) => TeamMember(id: json['id'] as int, userId: json['user'] as int, username: json['username'] as String, role: json['role'] as String);
 }
 
 class AuthService {
