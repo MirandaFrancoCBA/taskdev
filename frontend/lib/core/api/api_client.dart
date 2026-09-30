@@ -47,6 +47,11 @@ class ApiClient {
     return jsonDecode(response.body) as List<dynamic>;
   }
 
+  Future<void> delete(String path) async {
+    final response = await _send(() => _client.delete(Uri.parse('${AppConfig.apiBaseUrl}$path'), headers: _headers));
+    if (response.statusCode < 200 || response.statusCode >= 300) throw ApiException(_message(response), statusCode: response.statusCode);
+  }
+
   Future<Map<String, dynamic>> patch(String path, Map<String, dynamic> body) async {
     final response = await _send(() => _client.patch(Uri.parse('${AppConfig.apiBaseUrl}$path'), headers: _headers, body: jsonEncode(body)));
     return _decodeObject(response);
