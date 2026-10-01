@@ -345,7 +345,7 @@ class _CreateTaskDialogState extends State<_CreateTaskDialog> {
     }
     setState(() { saving = true; error = null; });
     try {
-      await widget.service.createTask(teamId: team.id, title: title.text.trim(), description: description.text.trim(), priority: priority, assignee: assignee, dueDate: dueDate);
+      await widget.service.createTask(teamId: widget.team.id, title: title.text.trim(), description: description.text.trim(), priority: priority, assignee: assignee, dueDate: dueDate);
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
       if (mounted) setState(() => error = e.toString());
