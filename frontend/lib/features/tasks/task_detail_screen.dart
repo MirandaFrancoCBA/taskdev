@@ -40,10 +40,12 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         widget.service.getTask(task.id),
         widget.service.listActivity(task.id),
       ]);
-      if (mounted) setState(() {
-        task = results[0] as Task;
-        activity = results[1] as List<TaskActivity>;
-      });
+      if (mounted) {
+        setState(() {
+          task = results[0] as Task;
+          activity = results[1] as List<TaskActivity>;
+        });
+      }
     } catch (e) {
       if (mounted) setState(() => error = e.toString());
     } finally {
@@ -57,11 +59,13 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         widget.service.getTask(task.id),
         widget.service.listActivity(task.id),
       ]);
-      if (mounted) setState(() {
-        task = results[0] as Task;
-        activity = results[1] as List<TaskActivity>;
-        error = null;
-      });
+      if (mounted) {
+        setState(() {
+          task = results[0] as Task;
+          activity = results[1] as List<TaskActivity>;
+          error = null;
+        });
+      }
     } catch (_) {
       // Keep the last good detail state; REST/manual refresh remains available.
     }
