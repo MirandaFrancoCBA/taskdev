@@ -23,6 +23,7 @@ class TaskPoolScreen extends StatefulWidget {
 
 class _TaskPoolScreenState extends State<TaskPoolScreen> {
   late final TaskService service = TaskService(widget.api);
+  late TeamSummary team = widget.team;
   List<Task> tasks = const [];
   bool loading = true;
   String? error;
@@ -34,7 +35,7 @@ class _TaskPoolScreenState extends State<TaskPoolScreen> {
     refresh();
     if (widget.api.accessToken != null) {
       realtime = TaskRealtimeService(
-        teamId: widget.team.id,
+        teamId: team.id,
         accessTokenProvider: () => widget.api.accessToken,
         onTaskEvent: _refreshFromRealtime,
       )..connect();
@@ -43,7 +44,7 @@ class _TaskPoolScreenState extends State<TaskPoolScreen> {
 
   Future<void> _refreshFromRealtime() async {
     try {
-      final result = await service.listTasks(widget.team.id);
+      final result = await service.listTasks(team.id);
       if (mounted) setState(() { tasks = result; error = null; });
     } catch (_) {
       // Preserve the last good local state. Manual REST refresh remains available.
@@ -59,7 +60,7 @@ class _TaskPoolScreenState extends State<TaskPoolScreen> {
   Future<void> refresh() async {
     setState(() { loading = true; error = null; });
     try {
-      final result = await service.listTasks(widget.team.id);
+      final result = await service.listTasks(team.id);
       if (mounted) setState(() => tasks = result);
     } catch (e) {
       if (mounted) setState(() => error = e.toString());
@@ -89,7 +90,7 @@ class _TaskPoolScreenState extends State<TaskPoolScreen> {
   Future<void> createTask() async {
     final created = await showDialog<bool>(
       context: context,
-      builder: (_) => _CreateTaskDialog(service: service, team: widget.team),
+      builder: (_) => _CreateTaskDialog(service: service, team: team),
     );
     if (created == true) await refresh();
   }
@@ -117,13 +118,22 @@ class _TaskPoolScreenState extends State<TaskPoolScreen> {
     final completed = tasks.where((task) => task.status == 'completed').toList();
 
     return TaskDevPage(
-      title: widget.team.name,
+      title: team.name,
       actions: [
-        if (widget.team.role == 'coordinator') IconButton(tooltip: 'Manage members', onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => TeamMembersScreen(api: widget.api, team: widget.team, userId: widget.userId))), icon: const Icon(Icons.group_outlined)),
+        if (team.role == 'coordinator') IconButton(
+          tooltip: 'Manage members',
+          onPressed: () async {
+            final updated = await Navigator.of(context).push<TeamSummary>(
+              MaterialPageRoute(builder: (_) => TeamMembersScreen(api: widget.api, team: team, userId: widget.userId)),
+            );
+            if (updated != null && mounted) setState(() => team = updated);
+          },
+          icon: const Icon(Icons.group_outlined),
+        ),
         IconButton(tooltip: 'Refresh', onPressed: loading ? null : refresh, icon: const Icon(Icons.refresh)),
         IconButton(tooltip: 'Log out', onPressed: _logout, icon: const Icon(Icons.logout)),
       ],
-      floatingActionButton: widget.team.role == 'coordinator'
+      floatingActionButton: team.role == 'coordinator'
           ? FloatingActionButton.extended(onPressed: createTask, icon: const Icon(Icons.add), label: const Text('New task'))
           : null,
       child: _body(available: available, mine: mine, blocked: blocked, completed: completed),
@@ -335,7 +345,7 @@ class _CreateTaskDialogState extends State<_CreateTaskDialog> {
     }
     setState(() { saving = true; error = null; });
     try {
-      await widget.service.createTask(teamId: widget.team.id, title: title.text.trim(), description: description.text.trim(), priority: priority, assignee: assignee, dueDate: dueDate);
+      await widget.service.createTask(teamId: team.id, title: title.text.trim(), description: description.text.trim(), priority: priority, assignee: assignee, dueDate: dueDate);
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
       if (mounted) setState(() => error = e.toString());
