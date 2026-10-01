@@ -168,7 +168,14 @@ class _TaskPoolScreenState extends State<TaskPoolScreen> {
         final sections = [
           _WorkSection(title: 'My work', icon: Icons.work_outline, tasks: mine, emptyMessage: 'You have no active tasks.', actionFor: _statusAction, onTap: _openTask),
           _WorkSection(title: 'Available', icon: Icons.inbox_outlined, tasks: available, emptyMessage: 'No tasks are waiting in the pool.', actionFor: (task) => FilledButton(onPressed: () => claim(task), child: const Text('Take')), onTap: _openTask),
-          _WorkSection(title: 'Blocked', icon: Icons.block_outlined, tasks: blocked, emptyMessage: 'No blocked tasks.', actionFor: _statusAction, onTap: _openTask),
+          _WorkSection(
+            title: 'Blocked',
+            icon: Icons.block_outlined,
+            tasks: blocked,
+            emptyMessage: 'No blocked tasks.',
+            actionFor: (task) => _canChangeStatus(task) ? _statusAction(task) : const SizedBox.shrink(),
+            onTap: _openTask,
+          ),
           _WorkSection(title: 'Completed', icon: Icons.task_alt, tasks: completed, emptyMessage: 'No completed tasks yet.', actionFor: (_) => const SizedBox.shrink(), onTap: _openTask),
         ];
         final wide = constraints.maxWidth >= 900;
@@ -196,6 +203,9 @@ class _TaskPoolScreenState extends State<TaskPoolScreen> {
       }),
     );
   }
+
+  bool _canChangeStatus(Task task) =>
+      team.role == 'coordinator' || task.assignee == widget.userId;
 
   Widget _statusAction(Task task) => PopupMenuButton<String>(
         tooltip: 'Update status',
