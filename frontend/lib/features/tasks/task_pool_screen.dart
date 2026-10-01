@@ -179,17 +179,25 @@ class _TaskPoolScreenState extends State<TaskPoolScreen> {
             const SizedBox(height: MasseDevTokens.spaceXs),
             Text('${tasks.length} tasks across the team', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: MasseDevTokens.mutedInk)),
             const SizedBox(height: MasseDevTokens.spaceLg),
-            if (wide)
-              GridView.count(
-                crossAxisCount: 2,
-                crossAxisSpacing: MasseDevTokens.spaceMd,
-                mainAxisSpacing: MasseDevTokens.spaceMd,
-                childAspectRatio: 1.2,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                children: sections,
-              )
-            else
+            if (wide) ...[
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: sections[0]),
+                  const SizedBox(width: MasseDevTokens.spaceMd),
+                  Expanded(child: sections[1]),
+                ],
+              ),
+              const SizedBox(height: MasseDevTokens.spaceLg),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: sections[2]),
+                  const SizedBox(width: MasseDevTokens.spaceMd),
+                  Expanded(child: sections[3]),
+                ],
+              ),
+            ] else
               ...sections.expand((section) => [section, const SizedBox(height: MasseDevTokens.spaceLg)]),
           ],
         );
