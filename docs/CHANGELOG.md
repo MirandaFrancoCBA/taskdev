@@ -6,6 +6,28 @@ This changelog records shipped project work and its GitHub attribution. It compl
 
 For each shipped change, record the release/date, linked issue and pull request, a short delivery summary, and the author/contributors shown by GitHub. Do not infer or invent authorship when GitHub does not provide reliable attribution.
 
+## v1.2.0 — Realtime and workspace hardening
+
+Released 2026-10-01. This release hardens the v1.1 operational experience without expanding TaskDev into a broader project-management product. REST remains authoritative, realtime messages remain invalidation signals, and server-side authorization remains the source of truth.
+
+### 2026-10-01
+
+- PR #81 / Issue #76 — Aligned blocked-task actions with backend status authorization: blocked work stays team-visible, while status controls are shown only to the assignee or a coordinator. Author: `MirandaFrancoCBA`.
+- PR #80 / Issue #75 — Reworked wide operational sections so variable task-card content can grow naturally without fixed GridView aspect-ratio overflow. Author: `MirandaFrancoCBA`.
+- PR #79 / Issue #74 — Made task detail and its activity timeline react to team realtime invalidation by refetching authoritative REST state while preserving the last good state on transient refresh failure. Author: `MirandaFrancoCBA`.
+- PR #78 / Issue #77 — Refreshed workspace team membership state after coordinator administration so subsequent controls and assignee choices use the updated team summary. Author: `MirandaFrancoCBA`.
+
+Automated backend and Flutter CI are green on the v1.2 main branch. Manual/browser regression items are tracked separately below and are not represented as completed unless actually exercised.
+
+### Manual regression checklist
+
+- [ ] Sign in, refresh credentials, sign out, and confirm revoked credentials cannot be reused.
+- [ ] As coordinator, add a member, change a member role, remove a member, and confirm the workspace reflects the updated membership without restarting.
+- [ ] With two clients, claim an available task and confirm the second client receives the resulting state through realtime invalidation + REST refetch.
+- [ ] Change task status as the assignee and as a coordinator; confirm another member sees blocked work but has no unauthorized status action.
+- [ ] Open the same task detail in two clients, change its status in one client, and confirm task metadata plus TaskActivity timeline update in the other without manual refresh.
+- [ ] Exercise mobile/narrow and wide/tablet-sized work views with multiple cards and long descriptions; confirm no overflow and that navigation/actions remain usable.
+
 ## v1.1.0 — MasseDev UI refresh
 
 Released 2026-09-30. This milestone refreshes the operational UI without changing TaskDev into a generic project-management suite. REST remains authoritative, realtime remains event-driven, and server-side authorization continues to enforce team and coordinator boundaries.
