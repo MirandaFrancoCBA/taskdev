@@ -48,8 +48,8 @@ Work should be incremental: each issue describes a small, verifiable outcome wit
 
 ## Status
 
-**MVP validated — automated CI is green and the final two-client browser smoke test has passed.**
+**v1.1.0 — MasseDev UI refresh shipped. Automated backend and Flutter CI are green.**
 
-The backend, coordinator/member Flutter workflow, atomic claiming, activity history, authorization hardening and real-time synchronization are implemented and manually validated with two concurrent browser clients. See [local development and MVP validation](docs/DEVELOPMENT.md) for the reproducible two-user scenario and current limitations.
+The validated MVP now includes the MasseDev responsive design system, operational work views, task detail/activity timeline, coordinator member administration, refresh-token revocation and safer WebSocket credential transport. The original two-client browser smoke validation remains documented in [local development and MVP validation](docs/DEVELOPMENT.md). See [delivery history](docs/CHANGELOG.md) for v1.1 traceability.
 
 TaskDev is a MasseDev project.
