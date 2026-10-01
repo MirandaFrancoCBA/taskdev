@@ -10,6 +10,9 @@ class TaskService {
     return data.map((item) => Task.fromJson(item as Map<String, dynamic>)).toList();
   }
 
+  Future<Task> getTask(int taskId) async =>
+      Task.fromJson(await api.get('/tasks/$taskId/'));
+
   Future<List<TaskActivity>> listActivity(int taskId) async {
     final data = await api.getList('/tasks/$taskId/activity/');
     return data

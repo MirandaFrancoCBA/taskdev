@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/masse_dev_theme.dart';
 import 'task.dart';
 import 'task_service.dart';
+import 'task_realtime_service.dart';
 
 class TaskDetailScreen extends StatefulWidget {
   const TaskDetailScreen({super.key, required this.task, required this.service});
@@ -15,7 +16,9 @@ class TaskDetailScreen extends StatefulWidget {
 }
 
 class _TaskDetailScreenState extends State<TaskDetailScreen> {
+  late Task task = widget.task;
   List<TaskActivity> activity = const [];
+  TaskRealtimeService? realtime;
   bool loading = true;
   String? error;
 
@@ -23,13 +26,26 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   void initState() {
     super.initState();
     _load();
+    realtime = TaskRealtimeService(
+      teamId: task.team,
+      accessTokenProvider: () => widget.service.api.accessToken,
+      onTaskEvent: _refreshFromRealtime,
+    )..connect();
   }
 
   Future<void> _load() async {
     setState(() { loading = true; error = null; });
     try {
-      final result = await widget.service.listActivity(widget.task.id);
-      if (mounted) setState(() => activity = result);
+      final results = await Future.wait<dynamic>([
+        widget.service.getTask(task.id),
+        widget.service.listActivity(task.id),
+      ]);
+      if (mounted) {
+        setState(() {
+          task = results[0] as Task;
+          activity = results[1] as List<TaskActivity>;
+        });
+      }
     } catch (e) {
       if (mounted) setState(() => error = e.toString());
     } finally {
@@ -37,9 +53,32 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     }
   }
 
+  Future<void> _refreshFromRealtime() async {
+    try {
+      final results = await Future.wait<dynamic>([
+        widget.service.getTask(task.id),
+        widget.service.listActivity(task.id),
+      ]);
+      if (mounted) {
+        setState(() {
+          task = results[0] as Task;
+          activity = results[1] as List<TaskActivity>;
+          error = null;
+        });
+      }
+    } catch (_) {
+      // Keep the last good detail state; REST/manual refresh remains available.
+    }
+  }
+
+  @override
+  void dispose() {
+    realtime?.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final task = widget.task;
     return Scaffold(
       appBar: AppBar(title: const Text('Task details')),
       body: RefreshIndicator(
