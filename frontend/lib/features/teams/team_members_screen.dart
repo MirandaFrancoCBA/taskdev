@@ -83,7 +83,10 @@ class _TeamMembersScreenState extends State<TeamMembersScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: Text('${team.name} members')),
+        appBar: AppBar(
+          title: Text('${team.name} members'),
+          leading: BackButton(onPressed: () => Navigator.of(context).pop(team)),
+        ),
         floatingActionButton: FloatingActionButton.extended(
           onPressed: saving ? null : _add,
           icon: const Icon(Icons.person_add_alt_1),
